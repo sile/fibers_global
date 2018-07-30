@@ -2,6 +2,15 @@
 name = "fibers_global"
 version = "0.1.0"
 authors = ["Takeru Ohta <phjgt308@gmail.com>"]
+description = "The global executor of fibers"
+homepage = "https://github.com/sile/fibers_global"
+repository = "https://github.com/sile/fibers_global"
+readme = "README.md"
+license = "MIT"
+
+[badges]
+travis-ci = {repository = "sile/fibers_global"}
+codecov = {repository = "sile/fibers_global"}
 
 [dependencies]
 fibers = "0.1"
