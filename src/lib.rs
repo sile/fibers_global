@@ -33,13 +33,11 @@
 //! # }
 //! ```
 #![warn(missing_docs)]
-extern crate fibers;
-extern crate futures;
 #[macro_use]
 extern crate lazy_static;
 
 use fibers::executor::ThreadPoolExecutorHandle;
-use fibers::sync::oneshot::MonitorError;
+use fibers::sync::oneshot::{Monitor, MonitorError};
 use fibers::Spawn;
 use futures::{Async, Future};
 use std::time::Duration;
@@ -66,6 +64,16 @@ where
     F: Future<Item = (), Error = ()> + Send + 'static,
 {
     handle().spawn(future);
+}
+
+/// Spawns a fiber by using the global `ThreadPoolExecutor` and returns a future to monitor it's execution result.
+pub fn spawn_monitor<F>(future: F) -> Monitor<F::Item, F::Error>
+where
+    F: Future + Send + 'static,
+    F::Item: Send + 'static,
+    F::Error: Send + 'static,
+{
+    handle().spawn_monitor(future)
 }
 
 /// Returns the handle of the global `ThreadPoolExecutor`.
