@@ -40,13 +40,46 @@ use fibers::executor::ThreadPoolExecutorHandle;
 use fibers::sync::oneshot::{Monitor, MonitorError};
 use fibers::Spawn;
 use futures::{Async, Future};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
+
+static THREAD_COUNT: AtomicUsize = AtomicUsize::new(0);
+
+fn get_thread_count() -> usize {
+    match THREAD_COUNT.swap(std::usize::MAX, Ordering::SeqCst) {
+        0 => num_cpus::get(),
+        n => n,
+    }
+}
+
+/// Sets the number of scheduler threads used by the global executor.
+///
+/// If the global executor already has started,
+/// the invocation of this function has no effect and `false` is returned.
+///
+/// # Panics
+///
+/// If the specified count is `0` or `usize::MAX`, the current thread will panic.
+pub fn set_thread_count(n: usize) -> bool {
+    assert_ne!(n, 0);
+    assert_ne!(n, std::usize::MAX);
+
+    loop {
+        let current = THREAD_COUNT.load(Ordering::SeqCst);
+        if current == std::usize::MAX {
+            return false;
+        }
+        if THREAD_COUNT.compare_and_swap(current, n, Ordering::SeqCst) == current {
+            return true;
+        }
+    }
+}
 
 lazy_static! {
     static ref GLOBAL_EXECUTOR: ThreadPoolExecutorHandle = {
         use fibers::Executor;
 
-        let executor = fibers::ThreadPoolExecutor::new()
+        let executor = fibers::ThreadPoolExecutor::with_thread_count(get_thread_count())
             .expect("Cannot create the global `ThreadPoolExecutor`");
         let handle = executor.handle();
         std::thread::spawn(move || {
@@ -124,4 +157,5 @@ mod tests {
         let result = execute(rx0.join(rx1).map(|(v0, v1)| v0 + v1));
         assert_eq!(result.ok(), Some(3));
     }
+
 }
